@@ -1,7 +1,7 @@
 # ⚡ Infrastructure & Automated Response (SOAR)
 
 ### Overview
-This directory contains the automation logic used to achieve the verified **41-second Mean Time to Respond (MTTR)** for the G-CROC project. This was accomplished by transitioning from passive alerting to active cloud-native containment.
+This directory contains the automation logic used to achieve the verified total **42-second Mean Time to Respond (MTTR)** for the G-CROC project. This was accomplished by transitioning from passive alerting to active cloud-native containment.
 
 ### The Playbook: `G-CROC-Critical-Email-Alert`
 The Logic App contained in this folder follows a high-fidelity response chain:
