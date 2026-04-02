@@ -1,0 +1,54 @@
+=============================================================================
+G-CROC PROJECT: SYSTEM MONITOR (SYSMON) TELEMETRY SETUP
+=============================================================================
+
+OBJECTIVE:
+Standard Windows Event Logs do not provide sufficient visibility into advanced 
+threats, in-memory execution, or Living-off-the-Land (LotL) binaries. 
+
+To achieve the 41-second MTTR and feed high-fidelity data to Microsoft Sentinel, 
+Microsoft Sysinternals Sysmon was deployed on the target virtual machine 
+(SIEM-Project-VM-1).
+
+Below are the exact execution steps and configurations used to deploy Sysmon 
+and capture Event ID 1 (Process Creation with Command Line arguments).
+
+-----------------------------------------------------------------------------
+STEP 1: DOWNLOAD REQUIRED BINARIES & CONFIGURATION
+-----------------------------------------------------------------------------
+1. Downloaded the Sysmon executable from the official Microsoft Sysinternals repository:
+   URL: https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon
+
+2. Downloaded the Advanced XML Configuration File. 
+   Instead of using the noisy default Sysmon configuration, I utilized the 
+   industry-standard SwiftOnSecurity Sysmon configuration template from GitHub. 
+   This config filters out noise and focuses on actual attacker behavior.
+   URL: https://github.com/SwiftOnSecurity/sysmon-config
+   File Name: sysmonconfig-export.xml
+
+-----------------------------------------------------------------------------
+STEP 2: INSTALLATION AND EXECUTION
+-----------------------------------------------------------------------------
+1. Extracted the Sysmon.zip file to the C:\ directory on the virtual machine.
+2. Placed the downloaded 'sysmonconfig-export.xml' file in the same directory.
+3. Opened an Elevated Command Prompt (Run as Administrator).
+4. Navigated to the installation directory:
+   > cd C:\Sysmon
+
+5. Executed the installation command to install the service, accept the 
+   End User License Agreement silently, and apply the custom XML configuration:
+   > sysmon64.exe -accepteula -i sysmonconfig-export.xml
+
+-----------------------------------------------------------------------------
+STEP 3: VERIFICATION & DATA INGESTION
+-----------------------------------------------------------------------------
+1. Verified the Sysmon service was running via the Windows Services module (services.msc).
+2. Opened Windows Event Viewer to confirm telemetry was actively being generated at:
+   Applications and Services Logs -> Microsoft -> Windows -> Sysmon -> Operational
+3. Once local logging was confirmed, the Azure Monitor Agent (AMA) automatically 
+   began scraping this specific event channel and forwarding the raw XML data 
+   to the Log Analytics Workspace for KQL parsing.
+
+=============================================================================
+END OF DOCUMENTATION
+=============================================================================
