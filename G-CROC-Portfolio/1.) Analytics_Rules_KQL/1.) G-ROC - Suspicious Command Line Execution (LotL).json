@@ -1,0 +1,99 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "workspace": {
+            "type": "String"
+        }
+    },
+    "resources": [
+        {
+            "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/55d599f2-7d35-456e-80f5-b858928dcea4')]",
+            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/55d599f2-7d35-456e-80f5-b858928dcea4')]",
+            "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+            "kind": "Scheduled",
+            "apiVersion": "2023-12-01-preview",
+            "properties": {
+                "displayName": "G-CROC - Suspicious Command Line Execution (LotL)",
+                "description": "Detects the use of living-off-the-land binaries (like powershell or certutil) reaching out to the internet to download payloads.",
+                "severity": "High",
+                "enabled": true,
+                "query": "Event\r\n| where Source == \"Microsoft-Windows-Sysmon\"\r\n| where EventID == 1\r\n// Do a broad, fast search first to save computing power\r\n| where EventData has_any (\"certutil\", \"powershell\") \r\n// Use Regex to slice open the XML and extract exactly what we need\r\n| extend TargetUser = extract(@\"Data Name=\"\"User\"\">([^<]+)</Data>\", 1, EventData)\r\n| extend ProcessImage = extract(@\"Data Name=\"\"Image\"\">([^<]+)</Data>\", 1, EventData)\r\n| extend CommandLine = extract(@\"Data Name=\"\"CommandLine\"\">([^<]+)</Data>\", 1, EventData)\r\n// Filter strictly for the malicious download commands\r\n| where CommandLine has_any (\"-urlcache\", \"Invoke-WebRequest\")\r\n// Only show the clean columns in the final alert\r\n| project TimeGenerated, Computer, TargetUser, ProcessImage, CommandLine",
+                "queryFrequency": "PT5M",
+                "queryPeriod": "PT5M",
+                "triggerOperator": "GreaterThan",
+                "triggerThreshold": 0,
+                "suppressionDuration": "PT5H",
+                "suppressionEnabled": false,
+                "startTimeUtc": null,
+                "tactics": [
+                    "Execution",
+                    "CommandAndControl"
+                ],
+                "techniques": [
+                    "T1059",
+                    "T1105"
+                ],
+                "subTechniques": [
+                    "T1059.001"
+                ],
+                "alertRuleTemplateName": null,
+                "incidentConfiguration": {
+                    "createIncident": true,
+                    "groupingConfiguration": {
+                        "enabled": true,
+                        "reopenClosedIncident": false,
+                        "lookbackDuration": "PT5H",
+                        "matchingMethod": "AllEntities",
+                        "groupByEntities": [],
+                        "groupByAlertDetails": [],
+                        "groupByCustomDetails": []
+                    }
+                },
+                "eventGroupingSettings": {
+                    "aggregationKind": "SingleAlert"
+                },
+                "alertDetailsOverride": {
+                    "alertDisplayNameFormat": "Suspicious Download Attempt detected on {{Computer}}",
+                    "alertDescriptionFormat": "A \"Living off the Land\" binary was executed by user {{TargetUser}}. The following command was used to attempt a file download: {{CommandLine}}",
+                    "alertDynamicProperties": []
+                },
+                "customDetails": {
+                    "Suspicious_Command": "CommandLine",
+                    "Executing_Binary": "ProcessImage"
+                },
+                "entityMappings": [
+                    {
+                        "entityType": "Host",
+                        "fieldMappings": [
+                            {
+                                "identifier": "HostName",
+                                "columnName": "Computer"
+                            }
+                        ]
+                    },
+                    {
+                        "entityType": "Account",
+                        "fieldMappings": [
+                            {
+                                "identifier": "FullName",
+                                "columnName": "TargetUser"
+                            }
+                        ]
+                    },
+                    {
+                        "entityType": "Process",
+                        "fieldMappings": [
+                            {
+                                "identifier": "CommandLine",
+                                "columnName": "CommandLine"
+                            }
+                        ]
+                    }
+                ],
+                "sentinelEntitiesMappings": null,
+                "templateVersion": null
+            }
+        }
+    ]
+}

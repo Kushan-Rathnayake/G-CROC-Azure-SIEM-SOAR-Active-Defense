@@ -1,0 +1,91 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "workspace": {
+            "type": "String"
+        }
+    },
+    "resources": [
+        {
+            "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/9f0adab7-1505-4918-a3fa-217e3ac589d7')]",
+            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/9f0adab7-1505-4918-a3fa-217e3ac589d7')]",
+            "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+            "kind": "Scheduled",
+            "apiVersion": "2023-12-01-preview",
+            "properties": {
+                "displayName": "Persistent Network Reconnaissance Detected",
+                "description": "Identifies external actors performing multi-port probing or high-frequency scanning against the honeypot infrastructure.",
+                "severity": "Medium",
+                "enabled": true,
+                "query": "NTANetAnalytics\r\n| where TimeGenerated > ago(1h)\r\n// 1. Filter for Inbound traffic to your Honeypot\r\n| where FlowDirection == \"Inbound\"\r\n// 2. Focus on your G-CROC ports\r\n| where DestPort in (80, 445, 1433, 3306)\r\n// 3. Summarize with the 'PortList' - this is the \"Pro\" move\r\n| summarize \r\n    Start_Time = min(TimeGenerated), \r\n    End_Time = max(TimeGenerated), \r\n    PortCount = dcount(DestPort), \r\n    PortList = make_set(DestPort, 100), \r\n    TotalHits = count() \r\n    by SrcIp, Country = tostring(Country), TargetSystem = DestVm\r\n// 4. Threshold: More than 10 hits OR more than 1 unique port\r\n| where TotalHits > 10 or PortCount > 1\r\n| project Start_Time, End_Time, SrcIp, Country, TargetSystem, PortCount, PortList, TotalHits",
+                "queryFrequency": "PT5M",
+                "queryPeriod": "PT5M",
+                "triggerOperator": "GreaterThan",
+                "triggerThreshold": 0,
+                "suppressionDuration": "PT5H",
+                "suppressionEnabled": false,
+                "startTimeUtc": null,
+                "tactics": [
+                    "Reconnaissance",
+                    "Discovery"
+                ],
+                "techniques": [
+                    "T1595",
+                    "T1046"
+                ],
+                "subTechniques": [
+                    "T1595.001"
+                ],
+                "alertRuleTemplateName": null,
+                "incidentConfiguration": {
+                    "createIncident": true,
+                    "groupingConfiguration": {
+                        "enabled": true,
+                        "reopenClosedIncident": false,
+                        "lookbackDuration": "PT12H",
+                        "matchingMethod": "AllEntities",
+                        "groupByEntities": [],
+                        "groupByAlertDetails": [],
+                        "groupByCustomDetails": []
+                    }
+                },
+                "eventGroupingSettings": {
+                    "aggregationKind": "SingleAlert"
+                },
+                "alertDetailsOverride": {
+                    "alertDisplayNameFormat": "G-CROC: Reconnaissance from {{Country}}",
+                    "alertDescriptionFormat": "Adversary performed {{TotalHits}} connection attempts across these specific ports: {{PortList}}",
+                    "alertDynamicProperties": []
+                },
+                "customDetails": {
+                    "Attacker_Origin": "Country",
+                    "Ports_Attempted": "PortList",
+                    "Total_Attempts": "TotalHits"
+                },
+                "entityMappings": [
+                    {
+                        "entityType": "IP",
+                        "fieldMappings": [
+                            {
+                                "identifier": "Address",
+                                "columnName": "SrcIp"
+                            }
+                        ]
+                    },
+                    {
+                        "entityType": "Host",
+                        "fieldMappings": [
+                            {
+                                "identifier": "HostName",
+                                "columnName": "TargetSystem"
+                            }
+                        ]
+                    }
+                ],
+                "sentinelEntitiesMappings": null,
+                "templateVersion": null
+            }
+        }
+    ]
+}

@@ -1,0 +1,89 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "workspace": {
+            "type": "String"
+        }
+    },
+    "resources": [
+        {
+            "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/ab6bf482-3787-4a47-90b0-13213bb3141a')]",
+            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/ab6bf482-3787-4a47-90b0-13213bb3141a')]",
+            "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+            "kind": "Scheduled",
+            "apiVersion": "2023-12-01-preview",
+            "properties": {
+                "displayName": "G-CROC: Anti-Forensics - Event Logs Cleared",
+                "description": "Detects a threat actor actively clearing the Windows Security or System event logs. Designed for immediate containment of post-compromise, anti-forensic activity.",
+                "severity": "High",
+                "enabled": true,
+                "query": "let timeframe = 1h; \r\n// Isolate Security Log clearing \r\nlet SecurityLogClear = SecurityEvent\r\n    | where TimeGenerated >= ago(timeframe)\r\n    // Filter the EventID before extending variables\r\n    | where EventID == 1102\r\n    | extend Log_Type = \"Security Log\"\r\n    | project TimeGenerated, HostName = Computer, UserAccount = Account, EventID, Log_Type;\r\n// Isolate System Log clearing \r\nlet SystemLogClear = Event\r\n    | where TimeGenerated >= ago(timeframe)\r\n    // Filter by the EventLog column to reduce query scan time\r\n    | where EventLog == \"System\" \r\n    | where EventID == 104\r\n    | extend Log_Type = \"System Log\"\r\n    | project TimeGenerated, HostName = Computer, UserAccount = UserName, EventID, Log_Type;\r\n// Unify and Handle Errors\r\nunion isfuzzy=true SecurityLogClear, SystemLogClear\r\n// Handle empty fields to prevent Sentinel entity mapping failures\r\n| extend UserAccount = iff(isnotempty(UserAccount), UserAccount, \"Unknown Account/SYSTEM\")\r\n| extend Action_Time = format_datetime(TimeGenerated, 'yyyy-MM-dd HH:mm:ss')\r\n// Auto-generate a URL to jump straight to the Host entity in Sentinel\r\n| extend Host_Investigation_URL = strcat(\"https://portal.azure.com/#blade/Microsoft_Azure_Security_Insights/EntitySummaryBlade/entityType/Host/entityId/\", HostName)\r\n// Project an output\r\n| project Action_Time, HostName, UserAccount, Log_Type, EventID, Host_Investigation_URL",
+                "queryFrequency": "PT10M",
+                "queryPeriod": "PT1H",
+                "triggerOperator": "GreaterThan",
+                "triggerThreshold": 0,
+                "suppressionDuration": "PT5H",
+                "suppressionEnabled": false,
+                "startTimeUtc": null,
+                "tactics": [
+                    "DefenseEvasion"
+                ],
+                "techniques": [
+                    "T1070"
+                ],
+                "subTechniques": [
+                    "T1070.001"
+                ],
+                "alertRuleTemplateName": null,
+                "incidentConfiguration": {
+                    "createIncident": true,
+                    "groupingConfiguration": {
+                        "enabled": true,
+                        "reopenClosedIncident": true,
+                        "lookbackDuration": "PT2H",
+                        "matchingMethod": "AllEntities",
+                        "groupByEntities": [],
+                        "groupByAlertDetails": [],
+                        "groupByCustomDetails": []
+                    }
+                },
+                "eventGroupingSettings": {
+                    "aggregationKind": "AlertPerResult"
+                },
+                "alertDetailsOverride": {
+                    "alertDisplayNameFormat": "CRITICAL: Anti-Forensics - {{Log_Type}} Cleared on {{HostName}} by {{UserAccount}}",
+                    "alertDescriptionFormat": "The threat actor using the account '{{UserAccount}}' successfully cleared the {{Log_Type}} on machine {{HostName}}. Check the Custom Details pane for the exact Event ID and the direct URL to investigate the compromised host.",
+                    "alertDynamicProperties": []
+                },
+                "customDetails": {
+                    "Cleared_Log": "Log_Type",
+                    "Event_ID": "EventID",
+                    "Investigate_Host_URL": "Host_Investigation_URL"
+                },
+                "entityMappings": [
+                    {
+                        "entityType": "Host",
+                        "fieldMappings": [
+                            {
+                                "identifier": "HostName",
+                                "columnName": "HostName"
+                            }
+                        ]
+                    },
+                    {
+                        "entityType": "Account",
+                        "fieldMappings": [
+                            {
+                                "identifier": "FullName",
+                                "columnName": "UserAccount"
+                            }
+                        ]
+                    }
+                ],
+                "sentinelEntitiesMappings": null,
+                "templateVersion": null
+            }
+        }
+    ]
+}

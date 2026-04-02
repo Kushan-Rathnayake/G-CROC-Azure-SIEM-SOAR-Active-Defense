@@ -1,0 +1,107 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "workspace": {
+            "type": "String"
+        }
+    },
+    "resources": [
+        {
+            "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/463d35cc-efd2-4969-ab83-a17fa4ea8018')]",
+            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/463d35cc-efd2-4969-ab83-a17fa4ea8018')]",
+            "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+            "kind": "Scheduled",
+            "apiVersion": "2023-12-01-preview",
+            "properties": {
+                "displayName": "G-CROC: Successful Breach after Recon/Brute Force",
+                "description": "This rule identifies instances where a successful remote login (Event ID 4624) originates from an external IP address previously flagged for aggressive reconnaissance or credential-guessing. This rule executes port probing on 80, 445, 1433, 3306, and 3389 filter out administrative noise and prioritize \"True Positive\" breaches. It monitors for attackers who have transitioned from the Reconnaissance phase to Initial Access.",
+                "severity": "High",
+                "enabled": true,
+                "query": "// Identify IPs probing ports or failing logins\r\nlet SuspiciousIPs = union \r\n    (SecurityEvent | where EventID == 4625 | project TimeGenerated, IpAddress, Type=\"FailedLogin\"),\r\n    (NTANetAnalytics | where FlowDirection == \"Inbound\" and DestPort in (80, 445, 1433, 3306, 3389) | project TimeGenerated, IpAddress = SrcIp, Type=\"PortProbe\")\r\n| summarize EventCount = count() by IpAddress\r\n| where EventCount >= 5;\r\n// Look for successful Windows Logins\r\nlet SuccessfulLogins = SecurityEvent\r\n| where EventID == 4624\r\n| where LogonType in (3, 10) \r\n| where ipv4_is_private(IpAddress) == false\r\n| project SuccessTime = TimeGenerated, IpAddress, TargetUserName, Computer;\r\n// Correlate the two tables\r\nSuccessfulLogins\r\n| join kind=inner (SuspiciousIPs) on IpAddress\r\n| project SuccessTime, IpAddress, TargetUserName, Computer, EventCount",
+                "queryFrequency": "PT10M",
+                "queryPeriod": "PT1H",
+                "triggerOperator": "GreaterThan",
+                "triggerThreshold": 0,
+                "suppressionDuration": "PT5H",
+                "suppressionEnabled": false,
+                "startTimeUtc": null,
+                "tactics": [
+                    "Reconnaissance",
+                    "CredentialAccess",
+                    "InitialAccess",
+                    "LateralMovement"
+                ],
+                "techniques": [
+                    "T1110",
+                    "T1078",
+                    "T1021",
+                    "T1595"
+                ],
+                "subTechniques": [
+                    "T1110.001",
+                    "T1078.003",
+                    "T1021.001",
+                    "T1595.001",
+                    "T1021.002"
+                ],
+                "alertRuleTemplateName": null,
+                "incidentConfiguration": {
+                    "createIncident": true,
+                    "groupingConfiguration": {
+                        "enabled": true,
+                        "reopenClosedIncident": true,
+                        "lookbackDuration": "PT2H",
+                        "matchingMethod": "AllEntities",
+                        "groupByEntities": [],
+                        "groupByAlertDetails": [],
+                        "groupByCustomDetails": []
+                    }
+                },
+                "eventGroupingSettings": {
+                    "aggregationKind": "AlertPerResult"
+                },
+                "alertDetailsOverride": {
+                    "alertDisplayNameFormat": "CRITICAL BREACH: Successful Login by {{IpAddress}} after Recon/Brute Force",
+                    "alertDescriptionFormat": "The external IP address {{IpAddress}} successfully compromised the local account '{{TargetUserName}}'. Prior to this successful breach, Sentinel detected {{EventCount}} reconnaissance probes or failed login attempts from this exact threat actor.",
+                    "alertDynamicProperties": []
+                },
+                "customDetails": {
+                    "Prior_Attack_Count": "EventCount",
+                    "Exact_Breach_Time": "SuccessTime"
+                },
+                "entityMappings": [
+                    {
+                        "entityType": "Account",
+                        "fieldMappings": [
+                            {
+                                "identifier": "FullName",
+                                "columnName": "TargetUserName"
+                            }
+                        ]
+                    },
+                    {
+                        "entityType": "IP",
+                        "fieldMappings": [
+                            {
+                                "identifier": "Address",
+                                "columnName": "IpAddress"
+                            }
+                        ]
+                    },
+                    {
+                        "entityType": "Host",
+                        "fieldMappings": [
+                            {
+                                "identifier": "HostName",
+                                "columnName": "Computer"
+                            }
+                        ]
+                    }
+                ],
+                "sentinelEntitiesMappings": null,
+                "templateVersion": null
+            }
+        }
+    ]
+}
