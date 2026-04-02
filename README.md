@@ -3,7 +3,7 @@
 ## 🛑 Executive Summary
 The **Global Cyber Reconnaissance Operations Center (G-CROC)** is an enterprise-grade SIEM/SOAR pipeline built natively within Microsoft Azure. While many security labs focus on passive monitoring, this project implements an **Active Defense** methodology. 
 
-By engineering a closed-loop automation pipeline, this architecture doesn't just "see" an attack, it autonomously isolates compromised assets. Leveraging Sysmon telemetry, custom KQL detection logic, and Azure Logic Apps, this system achieved a verified **41-second Mean Time to Respond (MTTR)** from the initial payload execution to total infrastructure containment.
+By engineering a closed-loop automation pipeline, this architecture doesn't just "see" an attack, it autonomously isolates compromised assets. Leveraging Sysmon telemetry, custom KQL detection logic, and Azure Logic Apps, this system achieved a verified **42-second Mean Time to Respond (MTTR)** from the initial payload execution to total infrastructure containment.
 
 ---
 
@@ -72,6 +72,6 @@ When Sentinel's KQL engine detects a critical threat (like an LotL payload execu
 ---
 
 ## 📈 Final Outcome
-By simulating a live-fire attack against the honeypot, I verified that the entire closed-loop pipeline, from the exact second the malicious command was executed to the moment the Azure infrastructure physically deallocated the machine was completed in exactly **41 seconds**. 
+By simulating a live-fire attack against the honeypot, I verified that the entire closed-loop pipeline, from the exact second the malicious command was executed to the moment the Azure infrastructure physically deallocated the machine was completed in exactly **42 seconds**. 
 
 This project successfully demonstrates the power of combining deep OS telemetry with cloud-native SOAR automation to drastically minimize attacker dwell time and enforce active containment.
