@@ -1,0 +1,278 @@
+{
+  "version": "Notebook/1.0",
+  "items": [
+    {
+      "id": "ab44d7d6-8ba2-4ffb-8b37-91bd04096b14",
+      "type": 12,
+      "name": "Identity & Access Monitoring (RDP Attacks)",
+      "content": {
+        "version": "NotebookGroup/1.0",
+        "groupType": "editable",
+        "items": [
+          {
+            "id": "e150f87f-07d3-4bbc-83ef-6de9290a180a",
+            "type": 3,
+            "name": "query - 1",
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "SecurityEvent\r\n| where EventID == 4625\r\n| where IpAddress != \"-\" and isnotempty(IpAddress)\r\n| where ipv4_is_private(IpAddress) == false\r\n| extend GeoInfo = geo_info_from_ip_address(IpAddress)\r\n| extend Country = tostring(GeoInfo.country), \r\n         Latitude = toreal(GeoInfo.latitude), \r\n         Longitude = toreal(GeoInfo.longitude)\r\n| summarize AttemptCount = count() by IpAddress, Country, Latitude, Longitude\r\n| where isnotnull(Latitude) and isnotnull(Longitude)",
+              "size": 0,
+              "timeContext": {
+                "durationMs": 2592000000
+              },
+              "queryType": 0,
+              "resourceType": "microsoft.operationalinsights/workspaces",
+              "visualization": "map",
+              "mapSettings": {
+                "locInfo": "LatLong",
+                "latitude": "Latitude",
+                "longitude": "Longitude",
+                "sizeSettings": "AttemptCount",
+                "opacity": 0.8,
+                "sizeAggregation": "Sum",
+                "minSize": 5,
+                "maxSize": 40,
+                "defaultSize": 3,
+                "itemColorSettings": {
+                  "type": "heatmap",
+                  "nodeColorField": "AttemptCount",
+                  "colorAggregation": "Sum",
+                  "heatmapPalette": "greenRed"
+                },
+                "labelSettings": "Country",
+                "legendMetric": "AttemptCount",
+                "numberOfMetrics": 10,
+                "legendAggregation": "Sum"
+              },
+              "crossComponentResources": [
+                "/subscriptions/b7373d51-6f66-4a92-8cdd-f2d6623bacd4/resourcegroups/resource_group_1/providers/microsoft.operationalinsights/workspaces/siem-project-log-analytics"
+              ],
+              "title": "Global Cyber Threat Landscape"
+            }
+          },
+          {
+            "id": "8a934cc7-0a1f-4fc7-8909-002a43911476",
+            "type": 3,
+            "name": "Geopolitical Identity Targeting (Country-to-Account Correlation)",
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "SecurityEvent\r\n| where EventID == 4625\r\n| extend GeoInfo = geo_info_from_ip_address(IpAddress)\r\n| extend Country = tostring(GeoInfo.country)\r\n| summarize AccountAttempts = count() by Country, TargetUserName\r\n| where AccountAttempts > 10\r\n| sort by AccountAttempts desc",
+              "size": 0,
+              "timeContext": {
+                "durationMs": 2592000000
+              },
+              "queryType": 0,
+              "resourceType": "microsoft.operationalinsights/workspaces",
+              "visualization": "table",
+              "gridSettings": {
+                "sortBy": [
+                  {
+                    "itemKey": "AccountAttempts",
+                    "sortOrder": 2
+                  }
+                ],
+                "formatters": [
+                  {
+                    "columnMatch": "AccountAtte",
+                    "formatter": 8,
+                    "formatOptions": {
+                      "palette": "red"
+                    }
+                  },
+                  {
+                    "columnMatch": "AccountAttempt",
+                    "formatter": 0
+                  }
+                ]
+              },
+              "title": "Geopolitical Identity Targeting (Country-to-Account Correlation)",
+              "crossComponentResources": [
+                "/subscriptions/b7373d51-6f66-4a92-8cdd-f2d6623bacd4/resourcegroups/resource_group_1/providers/microsoft.operationalinsights/workspaces/siem-project-log-analytics"
+              ]
+            }
+          },
+          {
+            "id": "d69a0344-278d-4b7c-aa91-7180e47df200",
+            "type": 3,
+            "name": "query - 1",
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "SecurityEvent\r\n| where EventID == 4625\r\n| summarize AttackCount = count() by TargetUserName\r\n| top 10 by AttackCount desc",
+              "size": 0,
+              "timeContext": {
+                "durationMs": 2592000000
+              },
+              "queryType": 0,
+              "resourceType": "microsoft.operationalinsights/workspaces",
+              "visualization": "barchart",
+              "chartSettings": {
+                "xSettings": {
+                  "label": "Targeted Account"
+                },
+                "ySettings": {
+                  "label": "Failed Login Attempts"
+                },
+                "legendSettings": {
+                  "sortOrder": 2,
+                  "position": "bottom"
+                },
+                "showMetrics": true,
+                "showLegend": false,
+                "seriesLabelSettings": []
+              },
+              "title": "Top 10 Targeted Accounts (Credential Stuffing Analysis)",
+              "aggregation": 0,
+              "crossComponentResources": [
+                "/subscriptions/b7373d51-6f66-4a92-8cdd-f2d6623bacd4/resourcegroups/resource_group_1/providers/microsoft.operationalinsights/workspaces/siem-project-log-analytics"
+              ]
+            }
+          }
+        ],
+        "expandable": true,
+        "title": "Identity & Access Monitoring (RDP Attacks)"
+      },
+      "styleSettings": {
+        "showBorder": true,
+        "borderStyle": "thick"
+      }
+    },
+    {
+      "id": "d64729df-3e43-44ee-aba6-541ce65b3569",
+      "type": 12,
+      "name": "Network Reconnaissance (Port Probing)",
+      "content": {
+        "version": "NotebookGroup/1.0",
+        "groupType": "editable",
+        "items": [
+          {
+            "id": "5bc821a7-2078-4e2b-8b2a-c99a0417d3c7",
+            "type": 3,
+            "name": "query - 0",
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "NTANetAnalytics\r\n| where TimeGenerated > ago(24h)\r\n| where DestPort in (80, 445, 1433, 3306)\r\n| summarize ProbeCount = count() by Country = tostring(Country)",
+              "size": 0,
+              "timeContext": {
+                "durationMs": 2592000000
+              },
+              "queryType": 0,
+              "resourceType": "microsoft.operationalinsights/workspaces",
+              "visualization": "map",
+              "mapSettings": {
+                "locInfo": "CountryRegion",
+                "latitude": "Latitude",
+                "longitude": "Longitude",
+                "itemColorSettings": {
+                  "type": "heatmap",
+                  "nodeColorField": "ProbeCount",
+                  "heatmapPalette": "orangeRed"
+                },
+                "sizeSettings": "ProbeCount",
+                "sizeAggregation": "Sum",
+                "minSize": 5,
+                "maxSize": 27,
+                "defaultSize": 5,
+                "opacity": 0.8,
+                "locInfoColumn": "Country",
+                "legendMetric": "ProbeCount",
+                "legendAggregation": "Sum",
+                "numberOfMetrics": 10
+              },
+              "crossComponentResources": [
+                "/subscriptions/b7373d51-6f66-4a92-8cdd-f2d6623bacd4/resourcegroups/resource_group_1/providers/microsoft.operationalinsights/workspaces/siem-project-log-analytics"
+              ],
+              "title": "Global Network Reconnaissance (Geo-Distribution)"
+            }
+          },
+          {
+            "id": "bb69b60a-42a4-44de-a0a6-4e61411010c6",
+            "type": 3,
+            "name": "query - 1",
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "NTANetAnalytics\r\n| where TimeGenerated > ago(24h)\r\n| where DestPort in (80, 445, 1433, 3306)\r\n| summarize Count = count() by Port = tostring(DestPort)",
+              "size": 0,
+              "timeContext": {
+                "durationMs": 2592000000
+              },
+              "queryType": 0,
+              "resourceType": "microsoft.operationalinsights/workspaces",
+              "visualization": "piechart",
+              "chartSettings": {
+                "yAxis": [
+                  "Count"
+                ],
+                "tooltipSettings": {
+                  "mode": "nearest"
+                },
+                "group": "Port",
+                "createOtherGroup": 7,
+                "seriesLabelSettings": []
+              },
+              "title": "Service Popularity & Target Port Distribution",
+              "aggregation": 0,
+              "crossComponentResources": [
+                "/subscriptions/b7373d51-6f66-4a92-8cdd-f2d6623bacd4/resourcegroups/resource_group_1/providers/microsoft.operationalinsights/workspaces/siem-project-log-analytics"
+              ]
+            },
+            "styleSettings": {
+              "showBorder": false
+            }
+          },
+          {
+            "id": "de1287ad-ac5c-493a-800d-de18ef2e87c9",
+            "type": 3,
+            "name": "query - 2",
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "NTANetAnalytics\r\n| where TimeGenerated > ago(24h)\r\n| where DestPort in (80, 445, 1433, 3306)\r\n| summarize Hits = count() by Country = tostring(Country), Port = tostring(DestPort)\r\n| order by Hits desc",
+              "size": 0,
+              "timeContext": {
+                "durationMs": 2592000000
+              },
+              "queryType": 0,
+              "resourceType": "microsoft.operationalinsights/workspaces",
+              "visualization": "barchart",
+              "chartSettings": {
+                "xAxis": "Country",
+                "xSettings": {
+                  "label": "Country"
+                },
+                "ySettings": {
+                  "label": "Total Hits"
+                },
+                "yAxis": [
+                  "Hits"
+                ],
+                "group": "Port",
+                "createOtherGroup": 10,
+                "legendSettings": {
+                  "sortOrder": 2,
+                  "position": "bottom"
+                }
+              },
+              "title": "Cross-Vector Analysis: Geographic Source vs. Service Targeting",
+              "crossComponentResources": [
+                "/subscriptions/b7373d51-6f66-4a92-8cdd-f2d6623bacd4/resourcegroups/resource_group_1/providers/microsoft.operationalinsights/workspaces/siem-project-log-analytics"
+              ]
+            }
+          }
+        ],
+        "expandable": true,
+        "title": "Network Reconnaissance (Port Probing)"
+      },
+      "styleSettings": {
+        "showBorder": false
+      }
+    }
+  ],
+  "isLocked": false,
+  "styleSettings": {},
+  "fromTemplateId": "sentinel-UserWorkbook",
+  "context": {
+    "ownerId": "/subscriptions/b7373d51-6f66-4a92-8cdd-f2d6623bacd4/resourceGroups/resource_group_1/providers/Microsoft.OperationalInsights/workspaces/siem-project-log-analytics"
+  },
+  "fallbackResourceIds": [
+    "/subscriptions/b7373d51-6f66-4a92-8cdd-f2d6623bacd4/resourcegroups/resource_group_1/providers/microsoft.operationalinsights/workspaces/siem-project-log-analytics"
+  ]
+}
