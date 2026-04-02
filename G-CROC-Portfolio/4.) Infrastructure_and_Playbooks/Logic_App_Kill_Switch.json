@@ -1,0 +1,136 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "workflows_G_CROC_Critical_Email_Alert_name": {
+            "defaultValue": "G-CROC-Critical-Email-Alert",
+            "type": "String"
+        },
+        "connections_azuresentinel_G_CROC_Critical_Email_Alert_externalid": {
+            "defaultValue": "/subscriptions/b7373d51-6f66-4a92-8cdd-f2d6623bacd4/resourceGroups/Resource_Group_1/providers/Microsoft.Web/connections/azuresentinel-G-CROC-Critical-Email-Alert",
+            "type": "String"
+        },
+        "connections_outlook_externalid": {
+            "defaultValue": "/subscriptions/b7373d51-6f66-4a92-8cdd-f2d6623bacd4/resourceGroups/Resource_Group_1/providers/Microsoft.Web/connections/outlook",
+            "type": "String"
+        },
+        "connections_azurevm_3_externalid": {
+            "defaultValue": "/subscriptions/b7373d51-6f66-4a92-8cdd-f2d6623bacd4/resourceGroups/Resource_Group_1/providers/Microsoft.Web/connections/azurevm-3",
+            "type": "String"
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "type": "Microsoft.Logic/workflows",
+            "apiVersion": "2017-07-01",
+            "name": "[parameters('workflows_G_CROC_Critical_Email_Alert_name')]",
+            "location": "southeastasia",
+            "identity": {
+                "type": "SystemAssigned"
+            },
+            "properties": {
+                "state": "Enabled",
+                "definition": {
+                    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {
+                        "$connections": {
+                            "defaultValue": {},
+                            "type": "Object"
+                        }
+                    },
+                    "triggers": {
+                        "Microsoft_Sentinel_incident": {
+                            "type": "ApiConnectionWebhook",
+                            "inputs": {
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['azuresentinel']['connectionId']"
+                                    }
+                                },
+                                "body": {
+                                    "callback_url": "@{listCallbackUrl()}"
+                                },
+                                "path": "/incident-creation"
+                            }
+                        }
+                    },
+                    "actions": {
+                        "Send_an_email_(V2)": {
+                            "runAfter": {},
+                            "type": "ApiConnection",
+                            "inputs": {
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['outlook']['connectionId']"
+                                    }
+                                },
+                                "method": "post",
+                                "body": {
+                                    "To": "kushanrathnayake2004@gmail.com",
+                                    "Subject": "🚨 High Severity SOC Alert: @{triggerBody()?['object']?['properties']?['title']}",
+                                    "Body": "<p class=\"editor-paragraph\">A high-severity security event has been detected on the network. Immediate triage is required.<br><br>Incident Details:<br>- Alert Name: @{triggerBody()?['object']?['properties']?['title']}<br>- Severity: @{triggerBody()?['object']?['properties']?['severity']}<br>- Time Generated: @{triggerBody()?['object']?['properties']?['createdTimeUtc']}<br><br>Description: @{triggerBody()?['object']?['properties']?['description']}<br><br><br>Direct link to investigate: @{triggerBody()?['object']?['properties']?['incidentUrl']}<br></p><br>"
+                                },
+                                "path": "/v2/Mail"
+                            }
+                        },
+                        "Deallocate_virtual_machine": {
+                            "runAfter": {
+                                "Send_an_email_(V2)": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "ApiConnection",
+                            "inputs": {
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['azurevm-1']['connectionId']"
+                                    }
+                                },
+                                "method": "post",
+                                "path": "/subscriptions/@{encodeURIComponent('b7373d51-6f66-4a92-8cdd-f2d6623bacd4')}/resourcegroups/@{encodeURIComponent('Resource_Group_1')}/providers/Microsoft.Compute/virtualMachines/@{encodeURIComponent('SIEM-Project-VM-1')}/deallocate",
+                                "queries": {
+                                    "api-version": "2019-12-01"
+                                }
+                            }
+                        }
+                    },
+                    "outputs": {}
+                },
+                "parameters": {
+                    "$connections": {
+                        "value": {
+                            "azuresentinel": {
+                                "id": "/subscriptions/b7373d51-6f66-4a92-8cdd-f2d6623bacd4/providers/Microsoft.Web/locations/southeastasia/managedApis/azuresentinel",
+                                "connectionId": "[parameters('connections_azuresentinel_G_CROC_Critical_Email_Alert_externalid')]",
+                                "connectionName": "[concat('azuresentinel-', parameters('workflows_G_CROC_Critical_Email_Alert_name'))]",
+                                "connectionProperties": {
+                                    "authentication": {
+                                        "type": "ManagedServiceIdentity"
+                                    }
+                                }
+                            },
+                            "outlook": {
+                                "id": "/subscriptions/b7373d51-6f66-4a92-8cdd-f2d6623bacd4/providers/Microsoft.Web/locations/southeastasia/managedApis/outlook",
+                                "connectionId": "[parameters('connections_outlook_externalid')]",
+                                "connectionName": "outlook",
+                                "connectionProperties": {}
+                            },
+                            "azurevm-1": {
+                                "id": "/subscriptions/b7373d51-6f66-4a92-8cdd-f2d6623bacd4/providers/Microsoft.Web/locations/southeastasia/managedApis/azurevm",
+                                "connectionId": "[parameters('connections_azurevm_3_externalid')]",
+                                "connectionName": "azurevm-3",
+                                "connectionProperties": {
+                                    "authentication": {
+                                        "type": "ManagedServiceIdentity"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    ]
+}
